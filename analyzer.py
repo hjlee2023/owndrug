@@ -3,8 +3,9 @@ import requests
 import sqlite3
 import time
 import re
+import os
 
-API_KEY = "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"
+API_KEY = os.getenv("PERPLEXITY_API_KEY", "")
 
 def test_api():
     """API 테스트"""

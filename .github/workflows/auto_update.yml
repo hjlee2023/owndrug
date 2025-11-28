@@ -28,6 +28,9 @@ jobs:
       - name: Run FierceBiotech collector
         run: python collector_fb.py
 
+      - name: Run GlobeNewswire collector
+        run: python collector_gn.py
+
       - name: Run analyzer
         env:
           PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}

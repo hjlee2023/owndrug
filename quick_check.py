@@ -20,12 +20,12 @@ conn.close()
 print("\n=== 분석 완료된 뉴스 (날짜순) ===\n")
 print(df)
 
-# 날짜 변환 & 7일 필터
+# 날짜 변환 & 30일 필터
 df['pub_date'] = pd.to_datetime(df['pub_date'], errors='coerce')
-seven_days_ago = datetime.now() - timedelta(days=7)
+thirty_days_ago = datetime.now() - timedelta(days=30)
 
-recent = df[df['pub_date'] >= seven_days_ago]
+recent = df[df['pub_date'] >= thirty_days_ago]
 
-print(f"\n=== 최근 7일 ({seven_days_ago.strftime('%Y-%m-%d')} 이후) ===\n")
+print(f"\n=== 최근 30일 ({thirty_days_ago.strftime('%Y-%m-%d')} 이후) ===\n")
 print(recent)
 print(f"\n총 {len(recent)}건")

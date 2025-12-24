@@ -41,7 +41,7 @@ def analyze_news_smart(title, summary):
     }
     
     # ★ Perplexity에게 맡기기
-    prompt = f"""Analyze this FDA news and identify the pharmaceutical companyand give a one-line summary in Korean. Impact는 해당 회사의 주가에 얼마나 영향을 미칠지를 평가하는 것으로, 주가 움직임의 절댓값이 시가총액의 크기와 반비례함을 이용하면 됩니다. 7점 이상이면 고영향으로, 상당한 주가 상승이 예측되고, 3점 이하이면 상당한 주가 하락이 예측되는 경우입니다.:
+    prompt = f"""이 제약바이오 뉴스를 분석하고, 기업의 이름과 티커를 식별하고, 한국어로 된 한 줄 요약을 제공해주세요. Impact는 해당 기업의 주가에 어떤 영향을 얼마나 미칠지 평가하는 지표로, 시가총액이 큰 주식일수록 주가가 잘 움직이지 않는다는 것을 반영하면 됩니다. 5점은 주가가 그대로일 것이라고 예측하는 것이고, 0점은 주가가 가장 크게 하락할 것을, 10점은 주가가 가장 크게 상승할 것을 예측하는 것입니다. 0.1점 단위로 평가해주세요.:
 
 Title: {title}
 Summary: {summary if summary else 'N/A'}

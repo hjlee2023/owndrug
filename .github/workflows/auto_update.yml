@@ -35,3 +35,15 @@ jobs:
         env:
           PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
         run: python analyzer.py
+
+      - name: Commit and push DB
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add fda_news.db
+          if ! git diff --quiet --staged; then
+            git commit -m "Auto update: $(date +'%Y-%m-%d %H:%M UTC')"
+            git push
+          else
+            echo "No changes to commit"
+          fi

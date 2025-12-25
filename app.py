@@ -156,7 +156,7 @@ st.markdown("---")
 st.header("🎮 FDA Drug Hunter: 승인 예측 게임")
 st.caption("실제 FDA 심사 케이스를 바탕으로 당신의 규제 전문가 실력을 테스트하세요!")
 
-# 실제 FDA 케이스 데이터베이스
+# 실제 FDA 케이스 데이터베이스 (20개로 확장)
 DRUG_CASES = [
     {
         "name": "Aduhelm (aducanumab)",
@@ -169,8 +169,7 @@ DRUG_CASES = [
         "safety": "뇌부종(ARIA-E) 35%",
         "answer": True,
         "reason": "바이오마커(아밀로이드 감소)를 surrogate endpoint로 인정하여 신속승인. 역사상 가장 논란이 된 승인으로 3명의 자문위원이 사임함.",
-        "ticker": "BIIB",
-        "difficulty": "hard"
+        "ticker": "BIIB"
     },
     {
         "name": "Exondys 51 (eteplirsen)",
@@ -183,8 +182,7 @@ DRUG_CASES = [
         "safety": "특별한 안전성 문제 없음",
         "answer": True,
         "reason": "대체 치료제가 전무한 희귀질환으로, Janet Woodcock FDA 국장이 직접 개입하여 조건부 승인. 'Need to be capitalized' 발언으로 논란.",
-        "ticker": "SRPT",
-        "difficulty": "hard"
+        "ticker": "SRPT"
     },
     {
         "name": "Makena (hydroxyprogesterone)",
@@ -197,8 +195,7 @@ DRUG_CASES = [
         "safety": "혈전증 위험 신호",
         "answer": False,
         "reason": "2023년 4월 FDA가 승인 철회. 신속승인 후 확증시험 실패 케이스.",
-        "ticker": "N/A",
-        "difficulty": "easy"
+        "ticker": "N/A"
     },
     {
         "name": "Ukoniq (umbralisib)",
@@ -211,8 +208,7 @@ DRUG_CASES = [
         "safety": "치료군 사망률 대조군 대비 높음",
         "answer": False,
         "reason": "2021년 신속승인 후 2022년 6월 자진철수. PI3K inhibitor class effect로 사망률 증가.",
-        "ticker": "TGTX",
-        "difficulty": "medium"
+        "ticker": "TGTX"
     },
     {
         "name": "Keytruda (pembrolizumab)",
@@ -225,8 +221,7 @@ DRUG_CASES = [
         "safety": "면역관련 이상반응 관리 가능",
         "answer": True,
         "reason": "명확한 PFS/OS 개선으로 표준치료로 자리잡음. 블록버스터 항암제.",
-        "ticker": "MRK",
-        "difficulty": "easy"
+        "ticker": "MRK"
     },
     {
         "name": "Oxbryta (voxelotor)",
@@ -239,8 +234,7 @@ DRUG_CASES = [
         "safety": "확증시험에서 사망/뇌졸중 불균형",
         "answer": False,
         "reason": "2024년 시장 철수. Surrogate endpoint(헤모글로빈)는 개선됐으나 임상적 benefit 없음.",
-        "ticker": "PFE",
-        "difficulty": "medium"
+        "ticker": "PFE"
     },
     {
         "name": "Zolgensma (onasemnogene)",
@@ -253,8 +247,7 @@ DRUG_CASES = [
         "safety": "간효소 상승 (관리 가능)",
         "answer": True,
         "reason": "치명적 희귀질환에 유전자치료로 획기적 효과. 사상 최고가 의약품($2.1M).",
-        "ticker": "NVS",
-        "difficulty": "medium"
+        "ticker": "NVS"
     },
     {
         "name": "Leqembi (lecanemab)",
@@ -267,9 +260,164 @@ DRUG_CASES = [
         "safety": "ARIA 12.6% (Aduhelm보다 낮음)",
         "answer": True,
         "reason": "Aduhelm 실패 후 동일 타겟으로 임상적 benefit 입증. 2023년 정식승인.",
-        "ticker": "ESALY",
-        "difficulty": "medium"
+        "ticker": "ESALY"
     },
+    {
+        "name": "Opdivo (nivolumab)",
+        "company": "Bristol Myers Squibb",
+        "indication": "간세포암 (HCC) 1차 치료",
+        "phase3_result": "CheckMate-459 실패",
+        "primary_endpoint": "OS 16.4개월 vs 14.7개월 (HR 0.85, p=0.075)",
+        "biomarker": "PD-L1 상관관계 불명확",
+        "advisory_vote": "통계적 유의성 미달",
+        "safety": "면역 이상반응 예측 가능",
+        "answer": False,
+        "reason": "p=0.075로 사전 설정된 0.05 기준 미달. 타 적응증 성공에도 간암은 승인 실패.",
+        "ticker": "BMY"
+    },
+    {
+        "name": "Spinraza (nusinersen)",
+        "company": "Biogen",
+        "indication": "척수성 근위축증 (SMA) 영아형",
+        "phase3_result": "ENDEAR 성공 (조기 종료)",
+        "primary_endpoint": "운동기능 milestone 달성 41% vs 0%",
+        "biomarker": "SMN 단백질 증가",
+        "advisory_vote": "만장일치 찬성",
+        "safety": "척수강내 주사 합병증",
+        "answer": True,
+        "reason": "치명적 희귀질환에 첫 치료제. Antisense oligonucleotide 기술의 성공 사례.",
+        "ticker": "BIIB"
+    },
+    {
+        "name": "Vascepa (icosapent ethyl)",
+        "company": "Amarin",
+        "indication": "심혈관 이벤트 감소 (고위험군)",
+        "phase3_result": "REDUCE-IT 성공",
+        "primary_endpoint": "MACE 25% 감소 (HR 0.75, p<0.001)",
+        "biomarker": "중성지방 18% 감소",
+        "advisory_vote": "심혈관 benefit 명확",
+        "safety": "심방세동 약간 증가",
+        "answer": True,
+        "reason": "EPA 단독제제로 명확한 심혈관 이득 입증. 2019년 정식 승인.",
+        "ticker": "AMRN"
+    },
+    {
+        "name": "Camzyos (mavacamten)",
+        "company": "Bristol Myers Squibb",
+        "indication": "폐쇄성 비대심근증 (HCM)",
+        "phase3_result": "EXPLORER-HCM 성공",
+        "primary_endpoint": "pVO2 1.4 mL/kg/min 증가 + NYHA class 개선",
+        "biomarker": "LVOT gradient 47 mmHg 감소",
+        "advisory_vote": "돌파구 치료제로 인정",
+        "safety": "수축기능 저하 모니터링 필요",
+        "answer": True,
+        "reason": "30년 만의 첫 HCM 치료제. Myosin inhibitor로 새로운 기전.",
+        "ticker": "BMY"
+    },
+    {
+        "name": "Lumryz (sodium oxybate)",
+        "company": "Avadel",
+        "indication": "기면증 (narcolepsy)",
+        "phase3_result": "REST-ON 성공",
+        "primary_endpoint": "Cataplexy 발작 주당 8.5회 감소",
+        "biomarker": "ESS 점수 개선",
+        "advisory_vote": "기존 Xyrem의 extended-release 버전",
+        "safety": "기존 제제와 유사",
+        "answer": True,
+        "reason": "1일 1회 투여로 편의성 개선. 2023년 승인.",
+        "ticker": "AVDL"
+    },
+    {
+        "name": "Galafold (migalastat)",
+        "company": "Amicus",
+        "indication": "Fabry disease (amenable mutations)",
+        "phase3_result": "FACETS 성공 (소규모)",
+        "primary_endpoint": "GI symptoms 개선 + 신장기능 유지",
+        "biomarker": "α-Gal A 효소활성 증가",
+        "advisory_vote": "경구용 첫 치료제",
+        "safety": "두통, 비인두염",
+        "answer": True,
+        "reason": "효소대체요법 대비 경구 투여 장점. Chaperone 치료제 첫 승인.",
+        "ticker": "FOLD"
+    },
+    {
+        "name": "Vyondys 53 (golodirsen)",
+        "company": "Sarepta",
+        "indication": "듀센 근이영양증 (DMD) - Exon 53 skipping",
+        "phase3_result": "단일군 25명",
+        "primary_endpoint": "Dystrophin 1.02% 증가",
+        "biomarker": "통계적 유의성 없음",
+        "advisory_vote": "Exondys 51 선례 따름",
+        "safety": "신독성 모니터링",
+        "answer": True,
+        "reason": "Exondys 51과 동일 논리로 신속승인. Dystrophin 1% 기준 논란 지속.",
+        "ticker": "SRPT"
+    },
+    {
+        "name": "Zilretta (triamcinolone)",
+        "company": "Flexion",
+        "indication": "골관절염 통증 (무릎)",
+        "phase3_result": "2개 임상 성공",
+        "primary_endpoint": "12주차 통증점수 개선",
+        "biomarker": "extended-release 제형",
+        "advisory_vote": "기존 약물 제형 변경",
+        "safety": "스테로이드 부작용",
+        "answer": True,
+        "reason": "스테로이드 서방형으로 12주 지속효과. 2017년 승인.",
+        "ticker": "FLXN"
+    },
+    {
+        "name": "Omidria (phenylephrine/ketorolac)",
+        "company": "Omeros",
+        "indication": "백내장 수술 중 동공축소 예방",
+        "phase3_result": "수술 중 투여 임상 성공",
+        "primary_endpoint": "동공 크기 유지 + 통증 감소",
+        "biomarker": "해당 없음",
+        "advisory_vote": "수술실 사용 제한적",
+        "safety": "기존 약물 조합",
+        "answer": True,
+        "reason": "수술 중 관류액에 혼합 사용. Niche market. 2014년 승인.",
+        "ticker": "OMER"
+    },
+    {
+        "name": "Kynamro (mipomersen)",
+        "company": "Kastle (구 Genzyme)",
+        "indication": "가족성 고콜레스테롤혈증 (HoFH)",
+        "phase3_result": "LDL 25% 감소",
+        "primary_endpoint": "통계적으로 유의미",
+        "biomarker": "ApoB 감소",
+        "advisory_vote": "간독성 우려",
+        "safety": "ALT 상승 12%, 지방간",
+        "answer": True,
+        "reason": "희귀질환 특례로 REMS 프로그램 조건부 승인. 2013년 승인 후 사용 극히 제한적.",
+        "ticker": "N/A"
+    },
+    {
+        "name": "Arcalyst (rilonacept)",
+        "company": "Regeneron",
+        "indication": "통풍 발작 예방",
+        "phase3_result": "2개 임상 성공",
+        "primary_endpoint": "통풍 발작 빈도 감소",
+        "biomarker": "IL-1 차단",
+        "advisory_vote": "기존 약물 대비 우월성 불명확",
+        "safety": "감염 위험 증가",
+        "answer": False,
+        "reason": "2012년 통풍 적응증 신청 반려됨. 희귀질환(CAPS)에만 승인 유지. Cost-benefit 문제.",
+        "ticker": "REGN"
+    },
+    {
+        "name": "Nuplazid (pimavanserin)",
+        "company": "Acadia",
+        "indication": "파킨슨병 환각/망상",
+        "phase3_result": "-020 성공 / -019 실패",
+        "primary_endpoint": "SAPS-PD 5.79점 개선 (vs 2.73점)",
+        "biomarker": "5-HT2A 역작용제",
+        "advisory_vote": "12:0 찬성 (치료 공백 인정)",
+        "safety": "QTc 연장 + 사망률 논란",
+        "answer": True,
+        "reason": "2016년 승인. 사후 사망률 시그널로 FDA가 재검토했으나 유지. 대안 부재가 결정적.",
+        "ticker": "ACAD"
+    }
 ]
 
 # 세션 상태 초기화
@@ -279,39 +427,28 @@ if 'game_streak' not in st.session_state:
     st.session_state.game_streak = 0
 if 'total_played' not in st.session_state:
     st.session_state.total_played = 0
+if 'correct_count' not in st.session_state:  # ← 수정: 정답 개수 별도 추적
+    st.session_state.correct_count = 0
 if 'current_case' not in st.session_state:
     st.session_state.current_case = None
 if 'answered' not in st.session_state:
     st.session_state.answered = False
-if 'difficulty_filter' not in st.session_state:
-    st.session_state.difficulty_filter = "all"
+if 'played_cases' not in st.session_state:  # ← 추가: 플레이한 케이스 추적
+    st.session_state.played_cases = []
 
-# 난이도 선택
-col_diff1, col_diff2, col_diff3, col_diff4 = st.columns(4)
-with col_diff1:
-    if st.button("🟢 Easy", use_container_width=True):
-        st.session_state.difficulty_filter = "easy"
-with col_diff2:
-    if st.button("🟡 Medium", use_container_width=True):
-        st.session_state.difficulty_filter = "medium"
-with col_diff3:
-    if st.button("🔴 Hard", use_container_width=True):
-        st.session_state.difficulty_filter = "hard"
-with col_diff4:
-    if st.button("🎲 All", use_container_width=True):
-        st.session_state.difficulty_filter = "all"
-
-st.caption(f"현재 난이도: **{st.session_state.difficulty_filter.upper()}**")
-
-# 새 케이스 시작
+# 새 케이스 시작 (중복 방지)
 if st.button("🎲 새로운 약물 케이스", use_container_width=True, type="primary"):
-    # 난이도 필터링
-    if st.session_state.difficulty_filter == "all":
-        filtered_cases = DRUG_CASES
-    else:
-        filtered_cases = [c for c in DRUG_CASES if c['difficulty'] == st.session_state.difficulty_filter]
+    # 아직 안 본 케이스만 필터링
+    available_cases = [c for c in DRUG_CASES if c['name'] not in st.session_state.played_cases]
     
-    st.session_state.current_case = random.choice(filtered_cases)
+    # 모든 케이스를 다 본 경우 리셋
+    if len(available_cases) == 0:
+        st.session_state.played_cases = []
+        available_cases = DRUG_CASES
+        st.success("🎉 모든 케이스를 완료했습니다! 처음부터 다시 시작합니다.")
+    
+    st.session_state.current_case = random.choice(available_cases)
+    st.session_state.played_cases.append(st.session_state.current_case['name'])
     st.session_state.answered = False
     st.rerun()
 
@@ -338,10 +475,12 @@ if st.session_state.current_case:
     
     with col2:
         st.markdown("#### 🤔 당신의 판단은?")
-        st.markdown(f"**난이도**: {case['difficulty'].upper()}")
         st.markdown(f"**현재 점수**: {st.session_state.game_score}점")
         st.markdown(f"**연속 정답**: {st.session_state.game_streak}회")
-        st.markdown(f"**정답률**: {(st.session_state.game_score / (st.session_state.total_played * 10) * 100) if st.session_state.total_played > 0 else 0:.1f}%")
+        st.markdown(f"**진행 상황**: {len(st.session_state.played_cases)}/{len(DRUG_CASES)}")
+        if st.session_state.total_played > 0:
+            accuracy = (st.session_state.correct_count / st.session_state.total_played * 100)
+            st.markdown(f"**정답률**: {accuracy:.1f}%")
     
     # 답변 버튼
     if not st.session_state.answered:
@@ -353,7 +492,8 @@ if st.session_state.current_case:
                 st.session_state.total_played += 1
                 
                 if case['answer'] == True:
-                    bonus = 5 if st.session_state.game_streak >= 3 else 0
+                    st.session_state.correct_count += 1  # ← 수정: 정답 카운트
+                    bonus = 5 if st.session_state.game_streak >= 2 else 0
                     points = 10 + bonus
                     st.session_state.game_score += points
                     st.session_state.game_streak += 1
@@ -370,7 +510,8 @@ if st.session_state.current_case:
                 st.session_state.total_played += 1
                 
                 if case['answer'] == False:
-                    bonus = 5 if st.session_state.game_streak >= 3 else 0
+                    st.session_state.correct_count += 1  # ← 수정: 정답 카운트
+                    bonus = 5 if st.session_state.game_streak >= 2 else 0
                     points = 10 + bonus
                     st.session_state.game_score += points
                     st.session_state.game_streak += 1
@@ -394,13 +535,17 @@ if st.session_state.current_case:
             st.markdown(f"**💰 관련 종목**: `{case['ticker']}`")
         
         if st.button("➡️ 다음 케이스", use_container_width=True):
-            # 난이도 필터링
-            if st.session_state.difficulty_filter == "all":
-                filtered_cases = DRUG_CASES
-            else:
-                filtered_cases = [c for c in DRUG_CASES if c['difficulty'] == st.session_state.difficulty_filter]
+            # 아직 안 본 케이스만 필터링
+            available_cases = [c for c in DRUG_CASES if c['name'] not in st.session_state.played_cases]
             
-            st.session_state.current_case = random.choice(filtered_cases)
+            # 모든 케이스를 다 본 경우 리셋
+            if len(available_cases) == 0:
+                st.session_state.played_cases = []
+                available_cases = DRUG_CASES
+                st.info("🎉 모든 케이스를 완료했습니다! 처음부터 다시 시작합니다.")
+            
+            st.session_state.current_case = random.choice(available_cases)
+            st.session_state.played_cases.append(st.session_state.current_case['name'])
             st.session_state.answered = False
             st.rerun()
 
@@ -411,19 +556,21 @@ else:
     with st.expander("📖 게임 방법"):
         st.markdown("""
         ### 게임 규칙
-        1. **실제 FDA 심사 케이스**를 바탕으로 한 임상시험 데이터가 제공됩니다
+        1. **실제 FDA 심사 케이스** 20개를 바탕으로 한 임상시험 데이터가 제공됩니다
         2. 제공된 정보를 보고 **승인 또는 반려**를 예측하세요
         3. 정답 시 **10점**, 3연속 정답 시 **보너스 +5점**
+        4. **중복 없이** 모든 케이스를 한 번씩 풀 수 있습니다
         
-        ### 난이도
-        - 🟢 **Easy**: 명확한 데이터로 판단 쉬움
-        - 🟡 **Medium**: 애매한 상황, surrogate endpoint 평가 필요
-        - 🔴 **Hard**: 실제로 FDA 내부에서도 논란이 됐던 케이스
+        ### 주요 케이스
+        - **Aduhelm**: 자문위원 0:10 반대했지만 승인
+        - **Exondys 51**: 12명 데이터로 승인
+        - **Opdivo 간암**: 타 적응증 성공해도 p=0.075로 반려
+        - **Nuplazid**: 사망률 논란에도 대안 부재로 승인 유지
         
         ### 팁
         - **Surrogate endpoint**만 개선되고 임상적 benefit이 불명확하면 위험
         - **희귀질환**은 데이터가 부족해도 승인될 수 있음
-        - **자문위원회 반대**를 뒤집고 승인된 케이스도 있음 (Aduhelm, Exondys 51)
+        - **자문위원회 반대**를 뒤집고 승인된 케이스도 있음
         - **안전성 시그널**이 있으면 효과가 좋아도 반려될 수 있음
         """)
 
@@ -438,7 +585,7 @@ with col_stat3:
     st.metric("📊 플레이 횟수", st.session_state.total_played)
 with col_stat4:
     if st.session_state.total_played > 0:
-        accuracy = (st.session_state.game_score / (st.session_state.total_played * 10) * 100)
+        accuracy = (st.session_state.correct_count / st.session_state.total_played * 100)
         st.metric("🎯 정답률", f"{accuracy:.1f}%")
     else:
         st.metric("🎯 정답률", "0%")
@@ -447,6 +594,9 @@ if st.button("🔄 게임 리셋"):
     st.session_state.game_score = 0
     st.session_state.game_streak = 0
     st.session_state.total_played = 0
+    st.session_state.correct_count = 0
     st.session_state.current_case = None
     st.session_state.answered = False
+    st.session_state.played_cases = []
     st.rerun()
+

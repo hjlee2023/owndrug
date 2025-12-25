@@ -1264,15 +1264,16 @@ def dodge_pharmacist_game():
 if __name__ == "__main__":
     dodge_pharmacist_game()
 
+
 # ============================================
-# 💊 약물 수집 RPG - 픽셀 감성 탑다운 게임 (PC + 모바일)
+# 💊 약물 수집 RPG - 픽셀 감성 탑다운 게임 (개선판)
 # ============================================
 
 import streamlit as st
 import streamlit.components.v1 as components
 
 def pixel_drug_collector_game():
-    """픽셀 감성 약물 수집 RPG - 탑다운 방식"""
+    """픽셀 감성 약물 수집 RPG - 탑다운 방식 (대형 맵)"""
     
     st.markdown("---")
     st.header("💊 약물 수집 RPG")
@@ -1437,7 +1438,7 @@ def pixel_drug_collector_game():
                 <div id="stats">
                     <div class="stat">
                         <div class="stat-label">환자 치료</div>
-                        <div class="stat-value" id="curedPatients">0</div>
+                        <div class="stat-value" id="curedPatients">0 / 0</div>
                     </div>
                     <div class="stat">
                         <div class="stat-label">보유 약물</div>
@@ -1449,7 +1450,7 @@ def pixel_drug_collector_game():
                     </div>
                 </div>
                 
-                <div id="messageBox">맵을 돌아다니며 약물💊을 수집하세요!</div>
+                <div id="messageBox">맵을 돌아다니며 약물💊을 수집하세요! (맵 크기: 50x50)</div>
                 
                 <div style="margin: 10px 0;">
                     <strong style="color: #00adb5;">보유 약물:</strong>
@@ -1471,7 +1472,7 @@ def pixel_drug_collector_game():
             ctx.imageSmoothingEnabled = false;
             
             const TILE_SIZE = 32;
-            const MAP_SIZE = 20;
+            const MAP_SIZE = 50; // 20 → 50 (훨씬 큰 맵!)
             
             // 약물 데이터베이스
             const drugDatabase = {
@@ -1546,60 +1547,126 @@ def pixel_drug_collector_game():
             
             // 게임 상태
             const game = {
-                player: { x: 10, y: 10, sprite: '🏃' },
+                player: { x: 25, y: 25, sprite: '🏃' },
                 inventory: {},
                 curedPatients: 0,
+                totalPatients: 0,
                 mistakes: 0,
                 drugs: [],
                 patients: [],
                 obstacles: [],
-                map: []
+                map: [],
+                occupiedPositions: new Set() // 겹침 방지!
             };
+            
+            // 위치 키 생성
+            function posKey(x, y) {
+                return `${x},${y}`;
+            }
+            
+            // 랜덤 빈 위치 찾기
+            function findEmptyPosition() {
+                let x, y, attempts = 0;
+                do {
+                    x = Math.floor(Math.random() * MAP_SIZE);
+                    y = Math.floor(Math.random() * MAP_SIZE);
+                    attempts++;
+                    if (attempts > 1000) {
+                        console.error('No empty position found!');
+                        return null;
+                    }
+                } while (game.occupiedPositions.has(posKey(x, y)) || (x === game.player.x && y === game.player.y));
+                
+                game.occupiedPositions.add(posKey(x, y));
+                return { x, y };
+            }
             
             // 맵 생성
             function generateMap() {
                 game.map = [];
+                game.occupiedPositions.clear();
+                
+                // 플레이어 위치 점유
+                game.occupiedPositions.add(posKey(game.player.x, game.player.y));
+                
                 for (let y = 0; y < MAP_SIZE; y++) {
                     game.map[y] = [];
                     for (let x = 0; x < MAP_SIZE; x++) {
-                        // 픽셀 타일 (잔디, 돌바닥 등)
                         const tileType = Math.random() > 0.7 ? 'dark' : 'light';
                         game.map[y][x] = { type: tileType };
                     }
                 }
                 
-                // 장애물 생성 (나무, 바위)
+                // 장애물 생성 (겹침 없이!)
                 game.obstacles = [];
-                for (let i = 0; i < 30; i++) {
-                    const x = Math.floor(Math.random() * MAP_SIZE);
-                    const y = Math.floor(Math.random() * MAP_SIZE);
-                    if (x !== game.player.x && y !== game.player.y) {
+                for (let i = 0; i < 80; i++) { // 20 → 80 (큰 맵에 맞게)
+                    const pos = findEmptyPosition();
+                    if (pos) {
                         game.obstacles.push({
-                            x, y,
+                            x: pos.x, 
+                            y: pos.y,
                             sprite: Math.random() > 0.5 ? '🌳' : '🪨'
                         });
                     }
                 }
                 
-                // 약물 배치
-                game.drugs = [];
-                const drugTypes = Object.keys(drugDatabase);
-                for (let i = 0; i < 15; i++) {
-                    const x = Math.floor(Math.random() * MAP_SIZE);
-                    const y = Math.floor(Math.random() * MAP_SIZE);
-                    const drugType = drugTypes[Math.floor(Math.random() * drugTypes.length)];
-                    game.drugs.push({ x, y, type: drugType });
-                }
-                
-                // 환자 배치
+                // 환자 먼저 배치 (15명)
                 game.patients = [];
                 const diseaseTypes = Object.keys(patientDatabase);
-                for (let i = 0; i < 8; i++) {
-                    const x = Math.floor(Math.random() * MAP_SIZE);
-                    const y = Math.floor(Math.random() * MAP_SIZE);
-                    const diseaseType = diseaseTypes[Math.floor(Math.random() * diseaseTypes.length)];
-                    game.patients.push({ x, y, disease: diseaseType, cured: false });
+                const patientCount = 15; // 8 → 15명
+                
+                for (let i = 0; i < patientCount; i++) {
+                    const pos = findEmptyPosition();
+                    if (pos) {
+                        const diseaseType = diseaseTypes[Math.floor(Math.random() * diseaseTypes.length)];
+                        game.patients.push({ 
+                            x: pos.x, 
+                            y: pos.y, 
+                            disease: diseaseType, 
+                            cured: false 
+                        });
+                    }
                 }
+                
+                game.totalPatients = game.patients.length;
+                
+                // 환자별 필요 약물 카운트
+                const drugNeeds = {};
+                game.patients.forEach(patient => {
+                    const correctDrug = patientDatabase[patient.disease].correctDrug;
+                    drugNeeds[correctDrug] = (drugNeeds[correctDrug] || 0) + 1;
+                });
+                
+                // 약물 배치 (필요량보다 많게!)
+                game.drugs = [];
+                const drugTypes = Object.keys(drugDatabase);
+                
+                // 각 필요 약물을 충분히 배치 (필요량 + 50%)
+                for (let drugType in drugNeeds) {
+                    const needed = drugNeeds[drugType];
+                    const toPlace = Math.ceil(needed * 1.5); // 1.5배로 배치
+                    
+                    for (let i = 0; i < toPlace; i++) {
+                        const pos = findEmptyPosition();
+                        if (pos) {
+                            game.drugs.push({ x: pos.x, y: pos.y, type: drugType });
+                        }
+                    }
+                }
+                
+                // 추가 랜덤 약물 (보너스)
+                for (let i = 0; i < 20; i++) {
+                    const pos = findEmptyPosition();
+                    if (pos) {
+                        const drugType = drugTypes[Math.floor(Math.random() * drugTypes.length)];
+                        game.drugs.push({ x: pos.x, y: pos.y, type: drugType });
+                    }
+                }
+                
+                console.log('Map generated!');
+                console.log('Patients:', game.totalPatients);
+                console.log('Drugs:', game.drugs.length);
+                console.log('Drug needs:', drugNeeds);
             }
             
             // 렌더링
@@ -1609,7 +1676,7 @@ def pixel_drug_collector_game():
                 const offsetX = game.player.x - 10;
                 const offsetY = game.player.y - 10;
                 
-                // 타일 그리기 (픽셀 감성)
+                // 타일 그리기
                 for (let y = 0; y < MAP_SIZE; y++) {
                     for (let x = 0; x < MAP_SIZE; x++) {
                         const screenX = (x - offsetX) * TILE_SIZE;
@@ -1618,12 +1685,10 @@ def pixel_drug_collector_game():
                         if (screenX >= -TILE_SIZE && screenX < canvas.width && 
                             screenY >= -TILE_SIZE && screenY < canvas.height) {
                             
-                            // 픽셀 타일
                             const tile = game.map[y][x];
                             ctx.fillStyle = tile.type === 'dark' ? '#2d5016' : '#38761d';
                             ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
                             
-                            // 타일 테두리 (픽셀 느낌)
                             ctx.strokeStyle = '#1e3a0f';
                             ctx.lineWidth = 1;
                             ctx.strokeRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
@@ -1648,7 +1713,6 @@ def pixel_drug_collector_game():
                     const screenY = (drug.y - offsetY) * TILE_SIZE;
                     if (screenX >= -TILE_SIZE && screenX < canvas.width && 
                         screenY >= -TILE_SIZE && screenY < canvas.height) {
-                        // 빛나는 효과
                         ctx.shadowBlur = 15;
                         ctx.shadowColor = drugDatabase[drug.type].color;
                         ctx.font = '24px Arial';
@@ -1664,7 +1728,6 @@ def pixel_drug_collector_game():
                         const screenY = (patient.y - offsetY) * TILE_SIZE;
                         if (screenX >= -TILE_SIZE && screenX < canvas.width && 
                             screenY >= -TILE_SIZE && screenY < canvas.height) {
-                            // 환자 하이라이트
                             ctx.fillStyle = patientDatabase[patient.disease].color + '40';
                             ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
                             
@@ -1674,19 +1737,16 @@ def pixel_drug_collector_game():
                     }
                 });
                 
-                // 플레이어 (중앙)
+                // 플레이어
                 const playerScreenX = 10 * TILE_SIZE;
                 const playerScreenY = 10 * TILE_SIZE;
                 
-                // 플레이어 그림자
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
                 ctx.fillRect(playerScreenX + 4, playerScreenY + 28, 24, 4);
                 
-                // 플레이어
                 ctx.font = 'bold 28px Arial';
                 ctx.fillText(game.player.sprite, playerScreenX + 2, playerScreenY + 26);
                 
-                // 미니맵 (우측 상단)
                 drawMinimap();
             }
             
@@ -1697,7 +1757,6 @@ def pixel_drug_collector_game():
                 const miniY = 10;
                 const scale = miniSize / MAP_SIZE;
                 
-                // 배경
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
                 ctx.fillRect(miniX, miniY, miniSize, miniSize);
                 ctx.strokeStyle = '#00adb5';
@@ -1707,20 +1766,20 @@ def pixel_drug_collector_game():
                 // 약물
                 ctx.fillStyle = '#ffeb3b';
                 game.drugs.forEach(drug => {
-                    ctx.fillRect(miniX + drug.x * scale, miniY + drug.y * scale, scale, scale);
+                    ctx.fillRect(miniX + drug.x * scale, miniY + drug.y * scale, Math.max(1, scale), Math.max(1, scale));
                 });
                 
                 // 환자
                 ctx.fillStyle = '#f44336';
                 game.patients.forEach(patient => {
                     if (!patient.cured) {
-                        ctx.fillRect(miniX + patient.x * scale, miniY + patient.y * scale, scale, scale);
+                        ctx.fillRect(miniX + patient.x * scale, miniY + patient.y * scale, Math.max(1, scale), Math.max(1, scale));
                     }
                 });
                 
                 // 플레이어
                 ctx.fillStyle = '#00ff00';
-                ctx.fillRect(miniX + game.player.x * scale, miniY + game.player.y * scale, scale * 2, scale * 2);
+                ctx.fillRect(miniX + game.player.x * scale, miniY + game.player.y * scale, Math.max(2, scale * 2), Math.max(2, scale * 2));
             }
             
             // 이동
@@ -1735,13 +1794,11 @@ def pixel_drug_collector_game():
                     case 'right': newX++; break;
                 }
                 
-                // 맵 경계
                 if (newX < 0 || newX >= MAP_SIZE || newY < 0 || newY >= MAP_SIZE) {
                     showMessage('맵 끝입니다!');
                     return;
                 }
                 
-                // 장애물 충돌
                 const hitObstacle = game.obstacles.some(obs => obs.x === newX && obs.y === newY);
                 if (hitObstacle) {
                     showMessage('길이 막혀있습니다!');
@@ -1781,8 +1838,6 @@ def pixel_drug_collector_game():
                     const correctDrug = patientInfo.correctDrug;
                     
                     showMessage(`${patientInfo.name}: "${patientInfo.description}" 어떤 약물을 사용하시겠습니까?`);
-                    
-                    // 인벤토리에서 선택
                     showDrugSelection(patient, correctDrug);
                 }
             }
@@ -1792,8 +1847,10 @@ def pixel_drug_collector_game():
                 const inventoryDiv = document.getElementById('inventory');
                 inventoryDiv.innerHTML = '';
                 
+                let hasItems = false;
                 for (let drugType in game.inventory) {
                     if (game.inventory[drugType] > 0) {
+                        hasItems = true;
                         const drugInfo = drugDatabase[drugType];
                         const div = document.createElement('div');
                         div.className = 'drug-item';
@@ -1806,6 +1863,10 @@ def pixel_drug_collector_game():
                         inventoryDiv.appendChild(div);
                     }
                 }
+                
+                if (!hasItems) {
+                    inventoryDiv.innerHTML = '<div style="text-align:center; color:#ff6b6b; padding:10px;">약물이 없습니다! 맵에서 더 찾으세요!</div>';
+                }
             }
             
             // 약물 사용
@@ -1813,19 +1874,17 @@ def pixel_drug_collector_game():
                 game.inventory[usedDrug]--;
                 
                 if (usedDrug === correctDrug) {
-                    // 성공!
                     patient.cured = true;
                     game.curedPatients++;
                     showMessage(`✅ 올바른 치료! ${patientDatabase[patient.disease].name}이(가) 완치되었습니다!`);
-                    document.getElementById('curedPatients').textContent = game.curedPatients;
+                    document.getElementById('curedPatients').textContent = `${game.curedPatients} / ${game.totalPatients}`;
                     
-                    if (game.curedPatients === game.patients.length) {
+                    if (game.curedPatients === game.totalPatients) {
                         setTimeout(() => {
                             alert(`🎉 축하합니다! 모든 환자를 치료했습니다!\n치료: ${game.curedPatients} | 부작용: ${game.mistakes}`);
                         }, 500);
                     }
                 } else {
-                    // 실패!
                     game.mistakes++;
                     showMessage(`❌ 부작용 발생! ${drugDatabase[usedDrug].name}은(는) 이 환자에게 맞지 않습니다!`);
                     document.getElementById('mistakes').textContent = game.mistakes;
@@ -1858,7 +1917,7 @@ def pixel_drug_collector_game():
                 
                 document.getElementById('drugCount').textContent = totalDrugs;
                 
-                if (Object.keys(game.inventory).length === 0) {
+                if (Object.keys(game.inventory).length === 0 || totalDrugs === 0) {
                     inventoryDiv.innerHTML = '<div style="text-align:center; color:#666; padding:10px;">약물이 없습니다</div>';
                 }
             }
@@ -1901,6 +1960,7 @@ def pixel_drug_collector_game():
             // 게임 시작
             generateMap();
             updateInventory();
+            document.getElementById('curedPatients').textContent = `0 / ${game.totalPatients}`;
             render();
         </script>
     </body>
@@ -1914,16 +1974,22 @@ def pixel_drug_collector_game():
     with st.expander("🎯 게임 가이드"):
         st.markdown("""
         ### 게임 목표
-        맵을 돌아다니며 약물을 수집하고, 환자에게 올바른 약물을 투여하여 치료하세요!
+        **50x50 대형 맵**을 탐험하며 약물을 수집하고, **15명의 환자**를 모두 치료하세요!
+        
+        ### 개선 사항 ✨
+        - **맵 크기**: 20x20 → **50x50** (2.5배 확대!)
+        - **환자 수**: 8명 → **15명**
+        - **약물 배치**: 환자별 필요 약물을 충분히 배치 (필요량의 1.5배 + 보너스)
+        - **겹침 방지**: 장애물/약물/환자가 절대 겹치지 않음
         
         ### 조작법
         - **PC**: WASD 또는 방향키 (←↑↓→)
         - **모바일**: 화면 아래 방향 버튼
         
         ### 게임 방법
-        1. 🏃 캐릭터를 조작해서 맵을 탐험
-        2. 💊 빛나는 약물을 발견하면 자동 획득
-        3. 😣 환자를 만나면 증상 확인
+        1. 🏃 50x50 대형 맵 탐험
+        2. 💊 빛나는 약물 자동 획득
+        3. 😣 환자 만나면 증상 확인
         4. 🎒 인벤토리에서 알맞은 약물 선택
         5. ✅ 올바른 약물 → 치료 성공!
         6. ❌ 잘못된 약물 → 부작용 발생
@@ -1935,26 +2001,13 @@ def pixel_drug_collector_game():
         - **모르핀** 💊 → 중증 통증 환자 😱
         - **메트포르민** 💊 → 당뇨 환자 🤒
         
-        ### 맵 요소
-        - 🏃 **플레이어**: 약사 (당신)
-        - 💊 **약물**: 빛나는 효과, 자동 획득
-        - 😣 **환자**: 컬러 하이라이트, 치료 필요
-        - 🌳🪨 **장애물**: 통과 불가
-        - 🗺️ **미니맵**: 우측 상단 (노랑=약물, 빨강=환자, 초록=플레이어)
-        
-        ### 픽셀 감성
-        - 레트로 픽셀 그래픽
-        - 타일 기반 맵
-        - 픽셀 렌더링 (crisp-edges)
-        - 네온 글로우 효과
-        
         ### 팁
-        - 약물 설명을 잘 읽고 환자 증상과 매칭하세요
-        - 미니맵을 활용해서 약물과 환자 위치 파악
-        - 잘못된 약물 사용 시 부작용 카운트 증가!
+        - 미니맵(우측 상단)을 활용해 약물/환자 위치 파악
+        - 노랑=약물, 빨강=환자, 초록=플레이어
+        - 약물이 부족하면 맵을 더 탐험하세요!
         - 모든 환자 치료 시 게임 클리어!
         
-        **약사가 되어 환자를 구하세요!** 💊🏥
+        **대형 맵에서 약사가 되어 환자를 구하세요!** 💊🏥
         """)
 
 # 게임 실행 (app.py에 추가)

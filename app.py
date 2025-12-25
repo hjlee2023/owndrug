@@ -718,3 +718,506 @@ else:
         st.session_state.game_finished = False
         st.rerun()
 
+# ============================================
+# 🎮 약사 피하기 게임 (PC + 모바일 지원)
+# ============================================
+
+import streamlit as st
+import streamlit.components.v1 as components
+
+def dodge_pharmacist_game():
+    """약사 피하기 미니게임 - PC 키보드 + 모바일 터치 지원"""
+    
+    st.markdown("---")
+    st.header("🎮 약사 피하기 게임")
+    st.markdown("**PC:** ← → 방향키로 이동 | **모바일:** 화면 터치로 이동 | 💊 약을 먹으면 점수 +1 | 💣 부작용 폭탄 피하기!")
+    
+    # 게임 HTML/JavaScript 코드
+    game_html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <style>
+            * {
+                -webkit-tap-highlight-color: transparent;
+                -webkit-touch-callout: none;
+                -webkit-user-select: none;
+                user-select: none;
+            }
+            body {
+                margin: 0;
+                padding: 10px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                font-family: 'Arial', sans-serif;
+                overflow: hidden;
+            }
+            #gameContainer {
+                text-align: center;
+                max-width: 100%;
+            }
+            #gameCanvas {
+                border: 4px solid white;
+                border-radius: 10px;
+                background: linear-gradient(180deg, #87CEEB 0%, #E0F6FF 100%);
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                display: block;
+                margin: 0 auto;
+                max-width: 100%;
+                height: auto;
+                touch-action: none;
+            }
+            #scoreBoard {
+                background: rgba(255,255,255,0.9);
+                padding: 10px 20px;
+                border-radius: 10px;
+                margin: 10px auto;
+                max-width: 90%;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            }
+            #score {
+                font-size: 20px;
+                font-weight: bold;
+                color: #667eea;
+                margin: 5px 0;
+            }
+            #rank {
+                font-size: 16px;
+                color: #764ba2;
+                margin: 5px 0;
+            }
+            #gameOver {
+                font-size: 22px;
+                color: #ff4444;
+                font-weight: bold;
+                margin: 10px 0;
+                display: none;
+            }
+            .button-container {
+                margin: 10px 0;
+                display: flex;
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            .button {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                font-size: 14px;
+                border-radius: 25px;
+                cursor: pointer;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                transition: transform 0.2s;
+                touch-action: manipulation;
+            }
+            .button:active {
+                transform: scale(0.95);
+            }
+            #controlHint {
+                background: rgba(255,255,255,0.8);
+                padding: 8px 15px;
+                border-radius: 8px;
+                margin: 10px auto;
+                font-size: 14px;
+                color: #333;
+                max-width: 90%;
+            }
+            
+            @media (max-width: 600px) {
+                #score { font-size: 18px; }
+                #rank { font-size: 14px; }
+                #gameOver { font-size: 18px; }
+                .button { padding: 8px 16px; font-size: 13px; }
+            }
+        </style>
+    </head>
+    <body>
+        <div id="gameContainer">
+            <div id="scoreBoard">
+                <div id="score">점수: 0</div>
+                <div id="rank">직급: 약국 인턴</div>
+                <div id="gameOver"></div>
+            </div>
+            <div id="controlHint">PC: ←→ 키보드 | 모바일: 화면 터치 👆</div>
+            <canvas id="gameCanvas" width="400" height="600"></canvas>
+            <div class="button-container">
+                <button class="button" onclick="startGame()">🎮 새 게임</button>
+                <button class="button" onclick="togglePause()">⏸️ 일시정지</button>
+            </div>
+        </div>
+
+        <script>
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // 캔버스 반응형 설정
+            function resizeCanvas() {
+                const container = document.getElementById('gameContainer');
+                const maxWidth = Math.min(400, window.innerWidth - 40);
+                const scale = maxWidth / 400;
+                canvas.style.width = maxWidth + 'px';
+                canvas.style.height = (600 * scale) + 'px';
+            }
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // 게임 상태
+            let gameState = {
+                player: {
+                    x: canvas.width / 2 - 20,
+                    y: canvas.height - 80,
+                    width: 40,
+                    height: 40,
+                    speed: 7,
+                    targetX: null // 터치 목표 위치
+                },
+                items: [],
+                score: 0,
+                gameOver: false,
+                paused: false,
+                frame: 0,
+                spawnRate: 60,
+                speed: 2,
+                isMobile: false
+            };
+            
+            // 모바일 감지
+            gameState.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            // 키보드 입력 (PC)
+            const keys = {};
+            document.addEventListener('keydown', (e) => {
+                keys[e.key] = true;
+                e.preventDefault();
+            });
+            document.addEventListener('keyup', (e) => {
+                keys[e.key] = false;
+                e.preventDefault();
+            });
+            
+            // 터치 입력 (모바일)
+            let touchActive = false;
+            
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                touchActive = true;
+                handleTouch(e);
+            }, { passive: false });
+            
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (touchActive) {
+                    handleTouch(e);
+                }
+            }, { passive: false });
+            
+            canvas.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                touchActive = false;
+                gameState.player.targetX = null;
+            }, { passive: false });
+            
+            canvas.addEventListener('touchcancel', (e) => {
+                e.preventDefault();
+                touchActive = false;
+                gameState.player.targetX = null;
+            }, { passive: false });
+            
+            // 마우스 입력 (PC에서 클릭으로도 플레이 가능)
+            canvas.addEventListener('mousedown', (e) => {
+                touchActive = true;
+                handleMouse(e);
+            });
+            
+            canvas.addEventListener('mousemove', (e) => {
+                if (touchActive) {
+                    handleMouse(e);
+                }
+            });
+            
+            canvas.addEventListener('mouseup', (e) => {
+                touchActive = false;
+                gameState.player.targetX = null;
+            });
+            
+            canvas.addEventListener('mouseleave', (e) => {
+                touchActive = false;
+                gameState.player.targetX = null;
+            });
+            
+            function handleTouch(e) {
+                if (gameState.gameOver || gameState.paused) return;
+                
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const touch = e.touches[0];
+                const x = (touch.clientX - rect.left) * scaleX;
+                
+                gameState.player.targetX = x - gameState.player.width / 2;
+            }
+            
+            function handleMouse(e) {
+                if (gameState.gameOver || gameState.paused) return;
+                
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const x = (e.clientX - rect.left) * scaleX;
+                
+                gameState.player.targetX = x - gameState.player.width / 2;
+            }
+            
+            // 직급 시스템
+            function getRank(score) {
+                if (score < 10) return '약국 인턴';
+                if (score < 25) return '신입 약사';
+                if (score < 50) return '중견 약사';
+                if (score < 100) return '약국 팀장';
+                if (score < 150) return '약무이사';
+                if (score < 200) return 'FDA 심사관';
+                if (score < 300) return 'FDA 부국장';
+                return 'FDA 국장 🏆';
+            }
+            
+            // 아이템 생성
+            function createItem() {
+                const isGood = Math.random() > 0.25;
+                return {
+                    x: Math.random() * (canvas.width - 30),
+                    y: -30,
+                    width: 30,
+                    height: 30,
+                    type: isGood ? 'pill' : 'bomb',
+                    emoji: isGood ? '💊' : '💣',
+                    speed: gameState.speed + Math.random() * 2
+                };
+            }
+            
+            // 플레이어 그리기
+            function drawPlayer() {
+                ctx.font = '40px Arial';
+                ctx.fillText('🏃', gameState.player.x, gameState.player.y + 35);
+            }
+            
+            // 아이템 그리기
+            function drawItems() {
+                gameState.items.forEach(item => {
+                    ctx.font = '30px Arial';
+                    ctx.fillText(item.emoji, item.x, item.y + 25);
+                });
+            }
+            
+            // 충돌 감지
+            function checkCollision(player, item) {
+                return player.x < item.x + item.width &&
+                       player.x + player.width > item.x &&
+                       player.y < item.y + item.height &&
+                       player.y + player.height > item.y;
+            }
+            
+            // 게임 업데이트
+            function update() {
+                if (gameState.gameOver || gameState.paused) return;
+                
+                gameState.frame++;
+                
+                // 플레이어 이동 - 키보드
+                if ((keys['ArrowLeft'] || keys['a'] || keys['A']) && gameState.player.x > 0) {
+                    gameState.player.x -= gameState.player.speed;
+                }
+                if ((keys['ArrowRight'] || keys['d'] || keys['D']) && gameState.player.x < canvas.width - gameState.player.width) {
+                    gameState.player.x += gameState.player.speed;
+                }
+                
+                // 플레이어 이동 - 터치/마우스 (부드러운 이동)
+                if (gameState.player.targetX !== null) {
+                    const dx = gameState.player.targetX - gameState.player.x;
+                    const moveSpeed = Math.min(Math.abs(dx), gameState.player.speed);
+                    
+                    if (Math.abs(dx) > 2) {
+                        if (dx > 0) {
+                            gameState.player.x += moveSpeed;
+                        } else {
+                            gameState.player.x -= moveSpeed;
+                        }
+                    }
+                    
+                    // 경계 체크
+                    gameState.player.x = Math.max(0, Math.min(canvas.width - gameState.player.width, gameState.player.x));
+                }
+                
+                // 아이템 생성
+                if (gameState.frame % gameState.spawnRate === 0) {
+                    gameState.items.push(createItem());
+                }
+                
+                // 난이도 증가
+                if (gameState.score > 0 && gameState.score % 20 === 0) {
+                    gameState.speed = Math.min(5, 2 + gameState.score / 50);
+                    gameState.spawnRate = Math.max(30, 60 - gameState.score / 5);
+                }
+                
+                // 아이템 업데이트
+                gameState.items = gameState.items.filter(item => {
+                    item.y += item.speed;
+                    
+                    // 충돌 체크
+                    if (checkCollision(gameState.player, item)) {
+                        if (item.type === 'pill') {
+                            gameState.score++;
+                            // 점수 획득 효과
+                            playScoreEffect(item.x, item.y);
+                            return false;
+                        } else {
+                            // 게임 오버
+                            gameState.gameOver = true;
+                            document.getElementById('gameOver').style.display = 'block';
+                            document.getElementById('gameOver').textContent = '게임 오버! 💥 부작용 발생!';
+                            return false;
+                        }
+                    }
+                    
+                    return item.y < canvas.height + 50;
+                });
+                
+                // 스코어 업데이트
+                document.getElementById('score').textContent = `점수: ${gameState.score}`;
+                document.getElementById('rank').textContent = `직급: ${getRank(gameState.score)}`;
+            }
+            
+            // 점수 획득 효과
+            function playScoreEffect(x, y) {
+                // 간단한 +1 텍스트 효과 (선택사항)
+            }
+            
+            // 게임 렌더링
+            function render() {
+                // 배경
+                const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                gradient.addColorStop(0, '#87CEEB');
+                gradient.addColorStop(1, '#E0F6FF');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // 구름 (애니메이션)
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                const cloud1Y = 100 + (gameState.frame % 200);
+                ctx.beginPath();
+                ctx.arc(80, cloud1Y, 30, 0, Math.PI * 2);
+                ctx.arc(120, cloud1Y - 5, 40, 0, Math.PI * 2);
+                ctx.arc(160, cloud1Y, 30, 0, Math.PI * 2);
+                ctx.fill();
+                
+                const cloud2Y = 250 + (gameState.frame % 150);
+                ctx.beginPath();
+                ctx.arc(280, cloud2Y, 35, 0, Math.PI * 2);
+                ctx.arc(320, cloud2Y - 5, 45, 0, Math.PI * 2);
+                ctx.arc(360, cloud2Y, 35, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 게임 요소
+                drawItems();
+                drawPlayer();
+                
+                // 일시정지
+                if (gameState.paused) {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 40px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('⏸️ 일시정지', canvas.width / 2, canvas.height / 2);
+                    ctx.textAlign = 'left';
+                }
+            }
+            
+            // 게임 루프
+            function gameLoop() {
+                update();
+                render();
+                requestAnimationFrame(gameLoop);
+            }
+            
+            // 게임 시작
+            function startGame() {
+                gameState = {
+                    player: {
+                        x: canvas.width / 2 - 20,
+                        y: canvas.height - 80,
+                        width: 40,
+                        height: 40,
+                        speed: 7,
+                        targetX: null
+                    },
+                    items: [],
+                    score: 0,
+                    gameOver: false,
+                    paused: false,
+                    frame: 0,
+                    spawnRate: 60,
+                    speed: 2,
+                    isMobile: gameState.isMobile
+                };
+                document.getElementById('gameOver').style.display = 'none';
+                document.getElementById('score').textContent = '점수: 0';
+                document.getElementById('rank').textContent = '직급: 약국 인턴';
+            }
+            
+            // 일시정지
+            function togglePause() {
+                if (!gameState.gameOver) {
+                    gameState.paused = !gameState.paused;
+                }
+            }
+            
+            // 게임 시작
+            startGame();
+            gameLoop();
+        </script>
+    </body>
+    </html>
+    """
+    
+    # HTML 컴포넌트 렌더링
+    components.html(game_html, height=850, scrolling=False)
+    
+    # 게임 설명
+    with st.expander("🎯 게임 가이드"):
+        st.markdown("""
+        ### 게임 방법
+        - **목표**: 하늘에서 떨어지는 약(💊)을 최대한 많이 먹으세요!
+        - **조작 (PC)**: 키보드 ← → 방향키 또는 A, D 키로 좌우 이동
+        - **조작 (모바일)**: 화면을 터치하면 캐릭터가 터치한 위치로 이동
+        - **조작 (PC 마우스)**: 마우스를 클릭한 채로 드래그해도 이동 가능
+        - **주의**: 💣 부작용 폭탄에 맞으면 게임 오버!
+        
+        ### 직급 시스템
+        점수에 따라 승진합니다:
+        - 0~9점: 약국 인턴
+        - 10~24점: 신입 약사
+        - 25~49점: 중견 약사
+        - 50~99점: 약국 팀장
+        - 100~149점: 약무이사
+        - 150~199점: FDA 심사관
+        - 200~299점: FDA 부국장
+        - 300점 이상: **FDA 국장** 🏆
+        
+        ### 난이도
+        - 점수가 높을수록 아이템이 빨리 떨어지고 자주 생성됩니다
+        - 약 75%, 폭탄 25% 확률로 생성
+        
+        ### 모바일 팁
+        - 화면 아무 곳이나 터치하면 캐릭터가 그 위치로 부드럽게 이동합니다
+        - 손가락을 계속 움직이면 캐릭터도 따라 움직입니다
+        - PC에서도 마우스로 클릭&드래그 가능!
+        
+        **팁**: 욕심내지 말고 안전하게 플레이하세요! 💊
+        """)
+
+# 게임 실행 (app.py 맨 뒤에 추가)
+if __name__ == "__main__":
+    dodge_pharmacist_game()

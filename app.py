@@ -1057,8 +1057,8 @@ def dodge_pharmacist_game():
                 
                 // 난이도 증가
                 if (gameState.score > 0 && gameState.score % 20 === 0) {
-                    gameState.speed = Math.min(5, 2 + gameState.score / 50);
-                    gameState.spawnRate = Math.max(30, 60 - gameState.score / 5);
+                    gameState.speed = 2 + gameState.score / 50;
+                    gameState.spawnRate = Math.max(10, 60 - gameState.score / 5); 
                 }
                 
                 // 아이템 업데이트

@@ -1263,3 +1263,648 @@ def dodge_pharmacist_game():
 # 게임 실행 (app.py 맨 뒤에 추가)
 if __name__ == "__main__":
     dodge_pharmacist_game()
+
+
+# ============================================
+# 🏥 임상시험 생존 게임 (PC + 모바일 지원)
+# ============================================
+
+import streamlit as st
+import streamlit.components.v1 as components
+
+def clinical_trial_game():
+    """임상시험 생존 게임 - 환자에게 올바른 약물 투여하기"""
+    
+    st.markdown("---")
+    st.header("🏥 임상시험 생존 게임")
+    st.markdown("**환자에게 올바른 약물을 투여하세요!** | 💊 약을 드래그해서 환자에게 투약 | ❌ 잘못된 약 투여 시 부작용 발생!")
+    
+    # 게임 HTML/JavaScript 코드
+    game_html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <style>
+            * {
+                -webkit-tap-highlight-color: transparent;
+                -webkit-touch-callout: none;
+                -webkit-user-select: none;
+                user-select: none;
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                padding: 10px;
+                background: linear-gradient(135deg, #e0f2f7 0%, #b3e5fc 100%);
+                font-family: 'Arial', sans-serif;
+                overflow-x: hidden;
+            }
+            #gameContainer {
+                max-width: 800px;
+                margin: 0 auto;
+            }
+            #scoreBoard {
+                background: rgba(255,255,255,0.95);
+                padding: 10px 20px;
+                border-radius: 10px;
+                margin: 10px auto;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+                display: flex;
+                justify-content: space-around;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            .stat {
+                text-align: center;
+            }
+            .stat-value {
+                font-size: 24px;
+                font-weight: bold;
+                color: #0277bd;
+            }
+            .stat-label {
+                font-size: 12px;
+                color: #666;
+            }
+            #gameArea {
+                position: relative;
+                background: linear-gradient(180deg, #fff9c4 0%, #fff3e0 100%);
+                border: 4px solid white;
+                border-radius: 15px;
+                height: 500px;
+                overflow: hidden;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            }
+            .patient {
+                position: absolute;
+                width: 80px;
+                height: 100px;
+                background: white;
+                border: 3px solid #333;
+                border-radius: 10px;
+                cursor: pointer;
+                transition: transform 0.3s, box-shadow 0.3s;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 5px;
+            }
+            .patient:hover {
+                transform: scale(1.05);
+                box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            }
+            .patient-emoji {
+                font-size: 40px;
+            }
+            .patient-disease {
+                font-size: 11px;
+                font-weight: bold;
+                color: #d32f2f;
+                text-align: center;
+                margin-top: 5px;
+            }
+            .patient-timer {
+                font-size: 10px;
+                color: #f57c00;
+                margin-top: 2px;
+            }
+            #drugPanel {
+                background: rgba(255,255,255,0.9);
+                border-radius: 10px;
+                padding: 15px;
+                margin: 15px 0;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            }
+            .drug-container {
+                display: flex;
+                justify-content: space-around;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            .drug {
+                width: 70px;
+                height: 90px;
+                background: linear-gradient(135deg, #4fc3f7 0%, #0277bd 100%);
+                border: 3px solid white;
+                border-radius: 10px;
+                cursor: grab;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-weight: bold;
+                transition: transform 0.2s;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+                touch-action: none;
+            }
+            .drug:active {
+                cursor: grabbing;
+                transform: scale(1.1);
+            }
+            .drug-emoji {
+                font-size: 30px;
+            }
+            .drug-name {
+                font-size: 10px;
+                text-align: center;
+                margin-top: 5px;
+            }
+            .floating-text {
+                position: absolute;
+                font-size: 24px;
+                font-weight: bold;
+                pointer-events: none;
+                animation: floatUp 1s ease-out forwards;
+            }
+            @keyframes floatUp {
+                to {
+                    transform: translateY(-50px);
+                    opacity: 0;
+                }
+            }
+            #gameOver {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(0,0,0,0.9);
+                color: white;
+                padding: 30px;
+                border-radius: 20px;
+                text-align: center;
+                display: none;
+                z-index: 1000;
+            }
+            .button {
+                background: linear-gradient(135deg, #4fc3f7 0%, #0277bd 100%);
+                color: white;
+                border: none;
+                padding: 12px 25px;
+                font-size: 16px;
+                border-radius: 25px;
+                cursor: pointer;
+                margin: 10px 5px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                transition: transform 0.2s;
+            }
+            .button:active {
+                transform: scale(0.95);
+            }
+            
+            @media (max-width: 600px) {
+                #gameArea { height: 400px; }
+                .patient { width: 60px; height: 80px; }
+                .patient-emoji { font-size: 30px; }
+                .patient-disease { font-size: 9px; }
+                .drug { width: 60px; height: 80px; }
+                .drug-emoji { font-size: 25px; }
+                .drug-name { font-size: 9px; }
+                .stat-value { font-size: 20px; }
+            }
+        </style>
+    </head>
+    <body>
+        <div id="gameContainer">
+            <div id="scoreBoard">
+                <div class="stat">
+                    <div class="stat-value" id="score">0</div>
+                    <div class="stat-label">환자 치료</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="lives">❤️❤️❤️</div>
+                    <div class="stat-label">생명</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="level">1</div>
+                    <div class="stat-label">레벨</div>
+                </div>
+            </div>
+            
+            <div id="drugPanel">
+                <div class="drug-container" id="drugContainer"></div>
+            </div>
+            
+            <div id="gameArea">
+                <div id="gameOver">
+                    <h2>게임 오버! 💔</h2>
+                    <p id="finalScore"></p>
+                    <button class="button" onclick="startGame()">🎮 다시 시작</button>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 15px;">
+                <button class="button" onclick="startGame()">🎮 새 게임</button>
+                <button class="button" onclick="togglePause()">⏸️ 일시정지</button>
+            </div>
+        </div>
+
+        <script>
+            // 게임 데이터
+            const diseases = [
+                { name: '고혈압', emoji: '😰', drug: '강압제' },
+                { name: '당뇨병', emoji: '🤒', drug: '혈당강하제' },
+                { name: '감염', emoji: '🤢', drug: '항생제' },
+                { name: '통증', emoji: '😣', drug: '진통제' },
+                { name: '우울증', emoji: '😔', drug: '항우울제' }
+            ];
+            
+            const drugs = [
+                { name: '강압제', emoji: '💊', color: '#e57373' },
+                { name: '혈당강하제', emoji: '💊', color: '#64b5f6' },
+                { name: '항생제', emoji: '💊', color: '#81c784' },
+                { name: '진통제', emoji: '💊', color: '#ffb74d' },
+                { name: '항우울제', emoji: '💊', color: '#ba68c8' }
+            ];
+            
+            // 게임 상태
+            let gameState = {
+                score: 0,
+                lives: 3,
+                level: 1,
+                patients: [],
+                gameOver: false,
+                paused: false,
+                patientSpeed: 3000,
+                maxPatients: 3,
+                draggedDrug: null,
+                draggedElement: null
+            };
+            
+            let gameArea = document.getElementById('gameArea');
+            let dragContainer = document.getElementById('drugContainer');
+            
+            // 약물 패널 생성
+            function createDrugPanel() {
+                dragContainer.innerHTML = '';
+                drugs.forEach((drug, index) => {
+                    const drugDiv = document.createElement('div');
+                    drugDiv.className = 'drug';
+                    drugDiv.draggable = true;
+                    drugDiv.id = `drug-${index}`;
+                    drugDiv.innerHTML = `
+                        <div class="drug-emoji">${drug.emoji}</div>
+                        <div class="drug-name">${drug.name}</div>
+                    `;
+                    drugDiv.style.background = `linear-gradient(135deg, ${drug.color} 0%, ${drug.color}dd 100%)`;
+                    drugDiv.dataset.drugName = drug.name;
+                    
+                    // PC 드래그 이벤트
+                    drugDiv.addEventListener('dragstart', handleDragStart);
+                    drugDiv.addEventListener('dragend', handleDragEnd);
+                    
+                    // 모바일 터치 이벤트
+                    drugDiv.addEventListener('touchstart', handleTouchStart, { passive: false });
+                    drugDiv.addEventListener('touchmove', handleTouchMove, { passive: false });
+                    drugDiv.addEventListener('touchend', handleTouchEnd, { passive: false });
+                    
+                    dragContainer.appendChild(drugDiv);
+                });
+            }
+            
+            // PC 드래그 핸들러
+            function handleDragStart(e) {
+                gameState.draggedDrug = e.target.dataset.drugName;
+                e.target.style.opacity = '0.5';
+            }
+            
+            function handleDragEnd(e) {
+                e.target.style.opacity = '1';
+                gameState.draggedDrug = null;
+            }
+            
+            // 모바일 터치 핸들러
+            let touchClone = null;
+            let touchStartPos = { x: 0, y: 0 };
+            
+            function handleTouchStart(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const drugDiv = e.target.closest('.drug');
+                
+                touchStartPos.x = touch.clientX;
+                touchStartPos.y = touch.clientY;
+                
+                gameState.draggedDrug = drugDiv.dataset.drugName;
+                gameState.draggedElement = drugDiv;
+                
+                // 드래그 중인 약물 복사본 생성
+                touchClone = drugDiv.cloneNode(true);
+                touchClone.style.position = 'fixed';
+                touchClone.style.left = touch.clientX - 35 + 'px';
+                touchClone.style.top = touch.clientY - 45 + 'px';
+                touchClone.style.opacity = '0.8';
+                touchClone.style.zIndex = '1000';
+                touchClone.style.pointerEvents = 'none';
+                document.body.appendChild(touchClone);
+                
+                drugDiv.style.opacity = '0.5';
+            }
+            
+            function handleTouchMove(e) {
+                e.preventDefault();
+                if (!touchClone) return;
+                
+                const touch = e.touches[0];
+                touchClone.style.left = touch.clientX - 35 + 'px';
+                touchClone.style.top = touch.clientY - 45 + 'px';
+            }
+            
+            function handleTouchEnd(e) {
+                e.preventDefault();
+                if (!touchClone) return;
+                
+                const touch = e.changedTouches[0];
+                const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+                const patient = targetElement ? targetElement.closest('.patient') : null;
+                
+                if (patient && gameState.draggedDrug) {
+                    treatPatient(patient, gameState.draggedDrug);
+                }
+                
+                document.body.removeChild(touchClone);
+                touchClone = null;
+                
+                if (gameState.draggedElement) {
+                    gameState.draggedElement.style.opacity = '1';
+                }
+                
+                gameState.draggedDrug = null;
+                gameState.draggedElement = null;
+            }
+            
+            // 환자 생성
+            function createPatient() {
+                if (gameState.gameOver || gameState.paused) return;
+                if (gameState.patients.length >= gameState.maxPatients) return;
+                
+                const disease = diseases[Math.floor(Math.random() * diseases.length)];
+                const patientDiv = document.createElement('div');
+                patientDiv.className = 'patient';
+                
+                const areaRect = gameArea.getBoundingClientRect();
+                const randomY = Math.random() * (areaRect.height - 120);
+                
+                patientDiv.style.left = '-100px';
+                patientDiv.style.top = randomY + 'px';
+                
+                patientDiv.innerHTML = `
+                    <div class="patient-emoji">${disease.emoji}</div>
+                    <div class="patient-disease">${disease.name}</div>
+                    <div class="patient-timer">⏰ 10s</div>
+                `;
+                
+                patientDiv.dataset.disease = disease.name;
+                patientDiv.dataset.requiredDrug = disease.drug;
+                patientDiv.dataset.timeLeft = 10;
+                
+                // PC 드롭 이벤트
+                patientDiv.addEventListener('dragover', handleDragOver);
+                patientDiv.addEventListener('drop', handleDrop);
+                
+                gameArea.appendChild(patientDiv);
+                
+                const patient = {
+                    element: patientDiv,
+                    disease: disease,
+                    timeLeft: 10,
+                    position: -100
+                };
+                
+                gameState.patients.push(patient);
+                movePatient(patient);
+            }
+            
+            function handleDragOver(e) {
+                e.preventDefault();
+            }
+            
+            function handleDrop(e) {
+                e.preventDefault();
+                if (gameState.draggedDrug) {
+                    treatPatient(e.target.closest('.patient'), gameState.draggedDrug);
+                }
+            }
+            
+            // 환자 이동
+            function movePatient(patient) {
+                const interval = setInterval(() => {
+                    if (gameState.gameOver || gameState.paused) {
+                        clearInterval(interval);
+                        return;
+                    }
+                    
+                    patient.position += 2;
+                    patient.element.style.left = patient.position + 'px';
+                    
+                    const areaRect = gameArea.getBoundingClientRect();
+                    if (patient.position > areaRect.width) {
+                        clearInterval(interval);
+                        loseLife();
+                        removePatient(patient);
+                    }
+                }, 30);
+                
+                // 타이머
+                const timerInterval = setInterval(() => {
+                    if (gameState.gameOver || gameState.paused) {
+                        clearInterval(timerInterval);
+                        return;
+                    }
+                    
+                    patient.timeLeft--;
+                    const timerElement = patient.element.querySelector('.patient-timer');
+                    if (timerElement) {
+                        timerElement.textContent = `⏰ ${patient.timeLeft}s`;
+                        if (patient.timeLeft <= 3) {
+                            timerElement.style.color = '#d32f2f';
+                        }
+                    }
+                    
+                    if (patient.timeLeft <= 0) {
+                        clearInterval(timerInterval);
+                    }
+                }, 1000);
+            }
+            
+            // 환자 치료
+            function treatPatient(patientElement, drugName) {
+                if (!patientElement) return;
+                
+                const requiredDrug = patientElement.dataset.requiredDrug;
+                const patient = gameState.patients.find(p => p.element === patientElement);
+                
+                if (!patient) return;
+                
+                if (drugName === requiredDrug) {
+                    // 성공!
+                    gameState.score++;
+                    showFloatingText(patientElement, '✅ 치료 성공!', '#4caf50');
+                    removePatient(patient);
+                    updateScore();
+                    
+                    // 레벨업
+                    if (gameState.score % 10 === 0) {
+                        levelUp();
+                    }
+                } else {
+                    // 실패!
+                    showFloatingText(patientElement, '❌ 부작용!', '#f44336');
+                    removePatient(patient);
+                    loseLife();
+                }
+            }
+            
+            // 환자 제거
+            function removePatient(patient) {
+                if (patient.element && patient.element.parentNode) {
+                    patient.element.remove();
+                }
+                gameState.patients = gameState.patients.filter(p => p !== patient);
+            }
+            
+            // 생명 잃기
+            function loseLife() {
+                gameState.lives--;
+                updateLives();
+                
+                if (gameState.lives <= 0) {
+                    endGame();
+                }
+            }
+            
+            // 레벨업
+            function levelUp() {
+                gameState.level++;
+                gameState.patientSpeed = Math.max(1500, gameState.patientSpeed - 200);
+                gameState.maxPatients = Math.min(5, gameState.maxPatients + 1);
+                document.getElementById('level').textContent = gameState.level;
+                showFloatingText(gameArea, `🎉 레벨 ${gameState.level}!`, '#ff9800');
+            }
+            
+            // UI 업데이트
+            function updateScore() {
+                document.getElementById('score').textContent = gameState.score;
+            }
+            
+            function updateLives() {
+                const hearts = '❤️'.repeat(gameState.lives) + '🖤'.repeat(3 - gameState.lives);
+                document.getElementById('lives').textContent = hearts;
+            }
+            
+            // 플로팅 텍스트
+            function showFloatingText(element, text, color) {
+                const floatingText = document.createElement('div');
+                floatingText.className = 'floating-text';
+                floatingText.textContent = text;
+                floatingText.style.color = color;
+                
+                const rect = element.getBoundingClientRect ? element.getBoundingClientRect() : { left: 400, top: 250 };
+                floatingText.style.left = rect.left + 'px';
+                floatingText.style.top = rect.top + 'px';
+                
+                document.body.appendChild(floatingText);
+                
+                setTimeout(() => {
+                    floatingText.remove();
+                }, 1000);
+            }
+            
+            // 게임 오버
+            function endGame() {
+                gameState.gameOver = true;
+                document.getElementById('finalScore').textContent = `최종 점수: ${gameState.score} | 레벨: ${gameState.level}`;
+                document.getElementById('gameOver').style.display = 'block';
+            }
+            
+            // 게임 시작
+            function startGame() {
+                gameState = {
+                    score: 0,
+                    lives: 3,
+                    level: 1,
+                    patients: [],
+                    gameOver: false,
+                    paused: false,
+                    patientSpeed: 3000,
+                    maxPatients: 3,
+                    draggedDrug: null,
+                    draggedElement: null
+                };
+                
+                document.getElementById('gameOver').style.display = 'none';
+                gameArea.querySelectorAll('.patient').forEach(p => p.remove());
+                
+                updateScore();
+                updateLives();
+                document.getElementById('level').textContent = 1;
+                
+                createDrugPanel();
+                
+                // 환자 생성 루프
+                setInterval(() => {
+                    if (!gameState.gameOver && !gameState.paused) {
+                        createPatient();
+                    }
+                }, gameState.patientSpeed);
+            }
+            
+            // 일시정지
+            function togglePause() {
+                if (!gameState.gameOver) {
+                    gameState.paused = !gameState.paused;
+                }
+            }
+            
+            // 게임 시작
+            startGame();
+        </script>
+    </body>
+    </html>
+    """
+    
+    # HTML 컴포넌트 렌더링
+    components.html(game_html, height=850, scrolling=False)
+    
+    # 게임 설명
+    with st.expander("🎯 게임 가이드"):
+        st.markdown("""
+        ### 게임 방법
+        **목표**: 환자들에게 올바른 약물을 투여해서 치료하세요!
+        
+        ### 조작법
+        - **PC**: 약물을 드래그해서 해당 질환 환자에게 드롭
+        - **모바일**: 약물을 터치한 채로 환자에게 드래그
+        
+        ### 질환과 치료약
+        - 😰 **고혈압** → 강압제 (빨강)
+        - 🤒 **당뇨병** → 혈당강하제 (파랑)
+        - 🤢 **감염** → 항생제 (초록)
+        - 😣 **통증** → 진통제 (주황)
+        - 😔 **우울증** → 항우울제 (보라)
+        
+        ### 게임 규칙
+        - 환자는 왼쪽에서 오른쪽으로 이동
+        - 각 환자는 10초의 제한시간 보유
+        - 올바른 약물 투여: 점수 +1
+        - 잘못된 약물 투여 or 환자 놓침: 생명 -1 ❤️
+        - 생명 0개 되면 게임 오버!
+        
+        ### 난이도
+        - 10명 치료할 때마다 레벨업
+        - 레벨이 오르면 환자 생성 속도 증가
+        - 최대 5명까지 동시 출현
+        
+        ### 팁
+        - 환자의 표정과 질환명을 잘 보세요!
+        - 타이머가 빨간색으로 변하면 3초 남음
+        - 욕심내지 말고 확실한 환자부터 치료!
+        
+        **약학지식을 활용해 환자를 살리세요!** 🏥💊
+        """)
+
+# 게임 실행 (app.py에 추가)
+if __name__ == "__main__":
+    clinical_trial_game()

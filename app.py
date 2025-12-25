@@ -772,11 +772,13 @@ def dodge_pharmacist_game():
             }
             #scoreBoard {
                 background: rgba(255,255,255,0.9);
-                padding: 10px 20px;
+                padding: 8px 15px;
                 border-radius: 10px;
                 margin: 10px auto;
-                max-width: 90%;
+                max-width: 95%;
                 box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+                overflow: hidden;
+                word-wrap: break-word;
             }
             #score {
                 font-size: 20px;
@@ -829,10 +831,65 @@ def dodge_pharmacist_game():
             }
             
             @media (max-width: 600px) {
-                #score { font-size: 18px; }
-                #rank { font-size: 14px; }
-                #gameOver { font-size: 18px; }
-                .button { padding: 8px 16px; font-size: 13px; }
+                body {
+                    padding: 5px;
+                }
+                #scoreBoard {
+                    padding: 6px 10px;
+                    margin: 5px auto;
+                    max-width: 98%;
+                }
+                #score { 
+                    font-size: 16px;
+                    line-height: 1.3;
+                }
+                #rank { 
+                    font-size: 13px;
+                    line-height: 1.3;
+                }
+                #gameOver { 
+                    font-size: 16px;
+                    line-height: 1.3;
+                }
+                .button { 
+                    padding: 8px 12px; 
+                    font-size: 12px; 
+                }
+                #controlHint {
+                    font-size: 12px;
+                    padding: 6px 10px;
+                    margin: 5px auto;
+                }
+                #gameCanvas {
+                    border: 3px solid white;
+                }
+            }
+
+            @media (max-width: 400px) {
+                body {
+                    padding: 3px;
+                }
+                #scoreBoard {
+                    padding: 5px 8px;
+                    margin: 3px auto;
+                }
+                #score { 
+                    font-size: 14px;
+                }
+                #rank { 
+                    font-size: 12px;
+                }
+                #gameOver { 
+                    font-size: 14px;
+                }
+                .button { 
+                    padding: 6px 10px; 
+                    font-size: 11px; 
+                }
+                #controlHint {
+                    font-size: 11px;
+                    padding: 5px 8px;
+                }
             }
         </style>
     </head>

@@ -147,16 +147,16 @@ st.markdown("---")
 st.caption("© Own Drug | 개발: 이현준 | 문의: zpthj1623@naver.com | AI 분석 powered by Perplexity")
 st.caption(f"🚀 Phase 2: AI 분석 {'✅ 완료' if analyzed_count > 0 else '⏳ 대기 중'} | 📅 최근 30일")
 
-
 # app.py 맨 아래에 추가
 import random
+import urllib.parse
 
 st.markdown("---")
 st.markdown("---")
 st.header("🎮 FDA Drug Hunter: 승인 예측 게임")
 st.caption("실제 FDA 심사 케이스를 바탕으로 당신의 규제 전문가 실력을 테스트하세요!")
 
-# 실제 FDA 케이스 데이터베이스 (20개로 확장)
+# 실제 FDA 케이스 데이터베이스 (20개)
 DRUG_CASES = [
     {
         "name": "Aduhelm (aducanumab)",
@@ -427,176 +427,294 @@ if 'game_streak' not in st.session_state:
     st.session_state.game_streak = 0
 if 'total_played' not in st.session_state:
     st.session_state.total_played = 0
-if 'correct_count' not in st.session_state:  # ← 수정: 정답 개수 별도 추적
+if 'correct_count' not in st.session_state:
     st.session_state.correct_count = 0
 if 'current_case' not in st.session_state:
     st.session_state.current_case = None
 if 'answered' not in st.session_state:
     st.session_state.answered = False
-if 'played_cases' not in st.session_state:  # ← 추가: 플레이한 케이스 추적
+if 'played_cases' not in st.session_state:
     st.session_state.played_cases = []
+if 'game_finished' not in st.session_state:
+    st.session_state.game_finished = False
 
-# 새 케이스 시작 (중복 방지)
-if st.button("🎲 새로운 약물 케이스", use_container_width=True, type="primary"):
-    # 아직 안 본 케이스만 필터링
-    available_cases = [c for c in DRUG_CASES if c['name'] not in st.session_state.played_cases]
+# 게임 종료 체크
+if st.session_state.game_finished:
+    st.balloons()
     
-    # 모든 케이스를 다 본 경우 리셋
-    if len(available_cases) == 0:
-        st.session_state.played_cases = []
-        available_cases = DRUG_CASES
-        st.success("🎉 모든 케이스를 완료했습니다! 처음부터 다시 시작합니다.")
+    st.success("### 🎉 게임 완료! 모든 FDA 케이스를 정복했습니다!")
     
-    st.session_state.current_case = random.choice(available_cases)
-    st.session_state.played_cases.append(st.session_state.current_case['name'])
-    st.session_state.answered = False
-    st.rerun()
+    # 최종 결과
+    accuracy = (st.session_state.correct_count / st.session_state.total_played * 100) if st.session_state.total_played > 0 else 0
+    
+    col_result1, col_result2, col_result3 = st.columns(3)
+    with col_result1:
+        st.metric("🏆 최종 점수", f"{st.session_state.game_score}점", 
+                  delta=f"{st.session_state.game_score - st.session_state.total_played*10:+d}점 (보너스)" if st.session_state.game_score > st.session_state.total_played*10 else None)
+    with col_result2:
+        st.metric("🎯 정답률", f"{accuracy:.1f}%")
+    with col_result3:
+        st.metric("🔥 최고 연속 정답", st.session_state.game_streak if st.session_state.game_streak > 0 else "기록 없음")
+    
+    # 등급 판정
+    st.markdown("---")
+    if accuracy >= 90:
+        grade = "FDA Commissioner"
+        emoji = "🥇"
+        message = "당신은 FDA 국장이 되기에 충분한 실력입니다. 자문위원회 반대도 뒤집을 수 있는 수준!"
+    elif accuracy >= 80:
+        grade = "Senior Reviewer"
+        emoji = "🥈"
+        message = "CDER의 시니어 심사관 수준입니다. Surrogate endpoint 평가에 능숙하시네요!"
+    elif accuracy >= 70:
+        grade = "Regulatory Affairs 전문가"
+        emoji = "🥉"
+        message = "제약사 RA 팀에서 일하기 충분한 실력입니다. NDA 준비 맡겨도 되겠어요!"
+    elif accuracy >= 60:
+        grade = "규제과학 학습자"
+        emoji = "📚"
+        message = "기본은 잡았지만 논란이 된 케이스들을 더 공부해보세요!"
+    else:
+        grade = "입문자"
+        emoji = "🔰"
+        message = "다시 도전해보세요! 희귀질환과 surrogate endpoint 개념을 복습하면 좋을 것 같아요."
+    
+    st.success(f"### {emoji} {grade} 급!")
+    st.markdown(message)
+    
+    # 공유 링크 생성
+    st.markdown("---")
+    st.markdown("### 🔗 결과 공유하기")
+    
+    # 앱 URL (배포된 Streamlit 주소)
+    app_url = "https://owndrug-aigmgmxuay3ntjszaxupmv.streamlit.app"
+    
+    # 공유 메시지 생성
+    share_text = f"""🎮 FDA Drug Hunter 결과
 
-# 게임 표시
-if st.session_state.current_case:
-    case = st.session_state.current_case
+{emoji} 등급: {grade}
+🎯 정답률: {accuracy:.1f}%
+🏆 점수: {st.session_state.game_score}점
+
+나도 FDA 승인 예측 게임에 도전해보세요!
+"""
     
-    # 약물 정보 카드
-    st.markdown("### 💊 FDA 심사 대상 약물")
+    # URL 인코딩
+    encoded_text = urllib.parse.quote(share_text)
+    encoded_url = urllib.parse.quote(app_url)
     
-    col1, col2 = st.columns([2, 1])
+    # 공유 버튼들
+    col_share1, col_share2, col_share3 = st.columns(3)
     
-    with col1:
-        st.markdown(f"**약물명**: {case['name']}")
-        st.markdown(f"**제약사**: {case['company']}")
-        st.markdown(f"**적응증**: {case['indication']}")
-        st.markdown("---")
-        st.markdown("#### 📊 임상시험 데이터")
-        st.markdown(f"- **Phase 3 결과**: {case['phase3_result']}")
-        st.markdown(f"- **Primary Endpoint**: {case['primary_endpoint']}")
-        st.markdown(f"- **Biomarker/Surrogate**: {case['biomarker']}")
-        st.markdown(f"- **자문위원회**: {case['advisory_vote']}")
-        st.markdown(f"- **안전성**: {case['safety']}")
+    with col_share1:
+        twitter_url = f"https://twitter.com/intent/tweet?text={encoded_text}&url={encoded_url}"
+        st.markdown(f"[🐦 트위터로 공유]({twitter_url})")
     
-    with col2:
-        st.markdown("#### 🤔 당신의 판단은?")
-        st.markdown(f"**현재 점수**: {st.session_state.game_score}점")
-        st.markdown(f"**연속 정답**: {st.session_state.game_streak}회")
-        st.markdown(f"**진행 상황**: {len(st.session_state.played_cases)}/{len(DRUG_CASES)}")
-        if st.session_state.total_played > 0:
-            accuracy = (st.session_state.correct_count / st.session_state.total_played * 100)
-            st.markdown(f"**정답률**: {accuracy:.1f}%")
+    with col_share2:
+        # 카카오톡은 웹 공유 API 사용 (모바일에서만 작동)
+        kakao_text = share_text.replace('\n', '%0A')
+        st.markdown(f"💬 카카오톡으로 공유")
+        st.caption("(모바일에서 복사 후 전송)")
     
-    # 답변 버튼
-    if not st.session_state.answered:
-        col_btn1, col_btn2 = st.columns(2)
-        
-        with col_btn1:
-            if st.button("✅ 승인", use_container_width=True, type="primary"):
-                st.session_state.answered = True
-                st.session_state.total_played += 1
-                
-                if case['answer'] == True:
-                    st.session_state.correct_count += 1  # ← 수정: 정답 카운트
-                    bonus = 5 if st.session_state.game_streak >= 2 else 0
-                    points = 10 + bonus
-                    st.session_state.game_score += points
-                    st.session_state.game_streak += 1
-                    st.success(f"🎉 정답! +{points}점 {'(연속보너스 +5점!)' if bonus > 0 else ''}")
-                else:
-                    st.session_state.game_streak = 0
-                    st.error("❌ 오답!")
-                
-                st.rerun()
-        
-        with col_btn2:
-            if st.button("❌ 반려/철회", use_container_width=True, type="secondary"):
-                st.session_state.answered = True
-                st.session_state.total_played += 1
-                
-                if case['answer'] == False:
-                    st.session_state.correct_count += 1  # ← 수정: 정답 카운트
-                    bonus = 5 if st.session_state.game_streak >= 2 else 0
-                    points = 10 + bonus
-                    st.session_state.game_score += points
-                    st.session_state.game_streak += 1
-                    st.success(f"🎉 정답! +{points}점 {'(연속보너스 +5점!)' if bonus > 0 else ''}")
-                else:
-                    st.session_state.game_streak = 0
-                    st.error("❌ 오답!")
-                
-                st.rerun()
+    with col_share3:
+        # 링크 복사용
+        st.code(app_url, language=None)
+        st.caption("링크 복사하기")
     
-    # 정답 공개
-    if st.session_state.answered:
-        if case['answer']:
-            st.success("### ✅ FDA 결정: 승인")
-        else:
-            st.error("### ❌ FDA 결정: 반려/철회")
-        
-        st.info(f"**💡 해설**: {case['reason']}")
-        
-        if case['ticker'] != "N/A":
-            st.markdown(f"**💰 관련 종목**: `{case['ticker']}`")
-        
-        if st.button("➡️ 다음 케이스", use_container_width=True):
-            # 아직 안 본 케이스만 필터링
-            available_cases = [c for c in DRUG_CASES if c['name'] not in st.session_state.played_cases]
-            
-            # 모든 케이스를 다 본 경우 리셋
-            if len(available_cases) == 0:
-                st.session_state.played_cases = []
-                available_cases = DRUG_CASES
-                st.info("🎉 모든 케이스를 완료했습니다! 처음부터 다시 시작합니다.")
-            
-            st.session_state.current_case = random.choice(available_cases)
-            st.session_state.played_cases.append(st.session_state.current_case['name'])
+    # 텍스트 복사 영역
+    with st.expander("📋 공유 메시지 복사"):
+        st.text_area("아래 내용을 복사하세요", share_text + f"\n\n{app_url}", height=200)
+    
+    # 다시 시작 버튼
+    st.markdown("---")
+    col_btn1, col_btn2 = st.columns(2)
+    with col_btn1:
+        if st.button("🔄 처음부터 다시 시작", use_container_width=True, type="primary"):
+            st.session_state.game_score = 0
+            st.session_state.game_streak = 0
+            st.session_state.total_played = 0
+            st.session_state.correct_count = 0
+            st.session_state.current_case = None
             st.session_state.answered = False
+            st.session_state.played_cases = []
+            st.session_state.game_finished = False
+            st.rerun()
+    
+    with col_btn2:
+        if st.button("📰 뉴스 페이지로", use_container_width=True):
+            st.session_state.game_score = 0
+            st.session_state.game_streak = 0
+            st.session_state.total_played = 0
+            st.session_state.correct_count = 0
+            st.session_state.current_case = None
+            st.session_state.answered = False
+            st.session_state.played_cases = []
+            st.session_state.game_finished = False
             st.rerun()
 
 else:
-    st.info("👆 위의 '새로운 약물 케이스' 버튼을 눌러 게임을 시작하세요!")
-    
-    # 게임 설명
-    with st.expander("📖 게임 방법"):
-        st.markdown("""
-        ### 게임 규칙
-        1. **실제 FDA 심사 케이스** 20개를 바탕으로 한 임상시험 데이터가 제공됩니다
-        2. 제공된 정보를 보고 **승인 또는 반려**를 예측하세요
-        3. 정답 시 **10점**, 3연속 정답 시 **보너스 +5점**
-        4. **중복 없이** 모든 케이스를 한 번씩 풀 수 있습니다
+    # 새 케이스 시작 (중복 방지)
+    if st.button("🎲 새로운 약물 케이스", use_container_width=True, type="primary"):
+        # 아직 안 본 케이스만 필터링
+        available_cases = [c for c in DRUG_CASES if c['name'] not in st.session_state.played_cases]
         
-        ### 주요 케이스
-        - **Aduhelm**: 자문위원 0:10 반대했지만 승인
-        - **Exondys 51**: 12명 데이터로 승인
-        - **Opdivo 간암**: 타 적응증 성공해도 p=0.075로 반려
-        - **Nuplazid**: 사망률 논란에도 대안 부재로 승인 유지
+        # 모든 케이스를 다 본 경우
+        if len(available_cases) == 0:
+            st.session_state.game_finished = True
+            st.rerun()
         
-        ### 팁
-        - **Surrogate endpoint**만 개선되고 임상적 benefit이 불명확하면 위험
-        - **희귀질환**은 데이터가 부족해도 승인될 수 있음
-        - **자문위원회 반대**를 뒤집고 승인된 케이스도 있음
-        - **안전성 시그널**이 있으면 효과가 좋아도 반려될 수 있음
-        """)
+        st.session_state.current_case = random.choice(available_cases)
+        st.session_state.played_cases.append(st.session_state.current_case['name'])
+        st.session_state.answered = False
+        st.rerun()
 
-# 리더보드 (간단 버전)
-st.markdown("---")
-col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
-with col_stat1:
-    st.metric("🏆 총점", st.session_state.game_score)
-with col_stat2:
-    st.metric("🔥 연속 정답", st.session_state.game_streak)
-with col_stat3:
-    st.metric("📊 플레이 횟수", st.session_state.total_played)
-with col_stat4:
-    if st.session_state.total_played > 0:
-        accuracy = (st.session_state.correct_count / st.session_state.total_played * 100)
-        st.metric("🎯 정답률", f"{accuracy:.1f}%")
+    # 게임 표시
+    if st.session_state.current_case:
+        case = st.session_state.current_case
+        
+        # 약물 정보 카드
+        st.markdown("### 💊 FDA 심사 대상 약물")
+        
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            st.markdown(f"**약물명**: {case['name']}")
+            st.markdown(f"**제약사**: {case['company']}")
+            st.markdown(f"**적응증**: {case['indication']}")
+            st.markdown("---")
+            st.markdown("#### 📊 임상시험 데이터")
+            st.markdown(f"- **Phase 3 결과**: {case['phase3_result']}")
+            st.markdown(f"- **Primary Endpoint**: {case['primary_endpoint']}")
+            st.markdown(f"- **Biomarker/Surrogate**: {case['biomarker']}")
+            st.markdown(f"- **자문위원회**: {case['advisory_vote']}")
+            st.markdown(f"- **안전성**: {case['safety']}")
+        
+        with col2:
+            st.markdown("#### 🤔 당신의 판단은?")
+            st.markdown(f"**현재 점수**: {st.session_state.game_score}점")
+            st.markdown(f"**연속 정답**: {st.session_state.game_streak}회")
+            st.markdown(f"**진행 상황**: {len(st.session_state.played_cases)}/{len(DRUG_CASES)}")
+            if st.session_state.total_played > 0:
+                accuracy = (st.session_state.correct_count / st.session_state.total_played * 100)
+                st.markdown(f"**정답률**: {accuracy:.1f}%")
+        
+        # 답변 버튼
+        if not st.session_state.answered:
+            col_btn1, col_btn2 = st.columns(2)
+            
+            with col_btn1:
+                if st.button("✅ 승인", use_container_width=True, type="primary"):
+                    st.session_state.answered = True
+                    st.session_state.total_played += 1
+                    
+                    if case['answer'] == True:
+                        st.session_state.correct_count += 1
+                        bonus = 5 if st.session_state.game_streak >= 2 else 0
+                        points = 10 + bonus
+                        st.session_state.game_score += points
+                        st.session_state.game_streak += 1
+                        st.success(f"🎉 정답! +{points}점 {'(연속보너스 +5점!)' if bonus > 0 else ''}")
+                    else:
+                        st.session_state.game_streak = 0
+                        st.error("❌ 오답!")
+                    
+                    st.rerun()
+            
+            with col_btn2:
+                if st.button("❌ 반려/철회", use_container_width=True, type="secondary"):
+                    st.session_state.answered = True
+                    st.session_state.total_played += 1
+                    
+                    if case['answer'] == False:
+                        st.session_state.correct_count += 1
+                        bonus = 5 if st.session_state.game_streak >= 2 else 0
+                        points = 10 + bonus
+                        st.session_state.game_score += points
+                        st.session_state.game_streak += 1
+                        st.success(f"🎉 정답! +{points}점 {'(연속보너스 +5점!)' if bonus > 0 else ''}")
+                    else:
+                        st.session_state.game_streak = 0
+                        st.error("❌ 오답!")
+                    
+                    st.rerun()
+        
+        # 정답 공개
+        if st.session_state.answered:
+            if case['answer']:
+                st.success("### ✅ FDA 결정: 승인")
+            else:
+                st.error("### ❌ FDA 결정: 반려/철회")
+            
+            st.info(f"**💡 해설**: {case['reason']}")
+            
+            if case['ticker'] != "N/A":
+                st.markdown(f"**💰 관련 종목**: `{case['ticker']}`")
+            
+            # 다음 케이스 또는 결과 화면
+            if st.button("➡️ 다음 케이스", use_container_width=True):
+                # 아직 안 본 케이스만 필터링
+                available_cases = [c for c in DRUG_CASES if c['name'] not in st.session_state.played_cases]
+                
+                # 모든 케이스를 다 본 경우 → 결과 화면
+                if len(available_cases) == 0:
+                    st.session_state.game_finished = True
+                    st.rerun()
+                
+                st.session_state.current_case = random.choice(available_cases)
+                st.session_state.played_cases.append(st.session_state.current_case['name'])
+                st.session_state.answered = False
+                st.rerun()
+
     else:
-        st.metric("🎯 정답률", "0%")
+        st.info("👆 위의 '새로운 약물 케이스' 버튼을 눌러 게임을 시작하세요!")
+        
+        # 게임 설명
+        with st.expander("📖 게임 방법"):
+            st.markdown("""
+            ### 게임 규칙
+            1. **실제 FDA 심사 케이스** 20개를 바탕으로 한 임상시험 데이터가 제공됩니다
+            2. 제공된 정보를 보고 **승인 또는 반려**를 예측하세요
+            3. 정답 시 **10점**, 3연속 정답 시 **보너스 +5점**
+            4. **중복 없이** 모든 케이스를 한 번씩 풀면 **최종 결과 화면**이 나옵니다
+            5. 결과를 **SNS로 공유**하여 친구들에게 도전장을 내밀 수 있습니다!
+            
+            ### 주요 케이스
+            - **Aduhelm**: 자문위원 0:10 반대했지만 승인
+            - **Exondys 51**: 12명 데이터로 승인
+            - **Opdivo 간암**: 타 적응증 성공해도 p=0.075로 반려
+            - **Nuplazid**: 사망률 논란에도 대안 부재로 승인 유지
+            
+            ### 팁
+            - **Surrogate endpoint**만 개선되고 임상적 benefit이 불명확하면 위험
+            - **희귀질환**은 데이터가 부족해도 승인될 수 있음
+            - **자문위원회 반대**를 뒤집고 승인된 케이스도 있음
+            - **안전성 시그널**이 있으면 효과가 좋아도 반려될 수 있음
+            """)
 
-if st.button("🔄 게임 리셋"):
-    st.session_state.game_score = 0
-    st.session_state.game_streak = 0
-    st.session_state.total_played = 0
-    st.session_state.correct_count = 0
-    st.session_state.current_case = None
-    st.session_state.answered = False
-    st.session_state.played_cases = []
-    st.rerun()
+    # 리더보드 (간단 버전)
+    st.markdown("---")
+    col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
+    with col_stat1:
+        st.metric("🏆 총점", st.session_state.game_score)
+    with col_stat2:
+        st.metric("🔥 연속 정답", st.session_state.game_streak)
+    with col_stat3:
+        st.metric("📊 플레이 횟수", st.session_state.total_played)
+    with col_stat4:
+        if st.session_state.total_played > 0:
+            accuracy = (st.session_state.correct_count / st.session_state.total_played * 100)
+            st.metric("🎯 정답률", f"{accuracy:.1f}%")
+        else:
+            st.metric("🎯 정답률", "0%")
+
+    if st.button("🔄 게임 리셋"):
+        st.session_state.game_score = 0
+        st.session_state.game_streak = 0
+        st.session_state.total_played = 0
+        st.session_state.correct_count = 0
+        st.session_state.current_case = None
+        st.session_state.answered = False
+        st.session_state.played_cases = []
+        st.session_state.game_finished = False
+        st.rerun()
 
